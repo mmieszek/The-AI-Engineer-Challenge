@@ -174,20 +174,35 @@ const LoadingDots = styled.div`
   }
 `;
 
-const ConnectionStatus = styled.div<{ connected: boolean }>`
+const ConnectionStatus = styled.div<{ $connected: boolean }>`
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
   font-size: 12px;
-  color: ${props => props.connected ? '#10b981' : '#ef4444'};
+  color: ${props => props.$connected ? '#10b981' : '#ef4444'};
 `;
 
-const StatusDot = styled.div<{ connected: boolean }>`
+const StatusDot = styled.div<{ $connected: boolean }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${props => props.connected ? '#10b981' : '#ef4444'};
+  background: ${props => props.$connected ? '#10b981' : '#ef4444'};
+`;
+
+const TestButton = styled.button`
+  background: #6b7280;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #4b5563;
+  }
 `;
 
 interface Message {
@@ -213,18 +228,69 @@ export default function Home() {
     }
   }, [messages]);
 
-  // Check FastAPI backend connection on component mount
+  // Check FastAPI backend connection on component mount and periodically
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const response = await fetch(`${fastApiUrl}/api/health`);
-        setConnected(response.ok);
+        console.log('Checking FastAPI health at:', `${fastApiUrl}/api/health`);
+        const response = await fetch(`${fastApiUrl}/api/health`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Health check response:', data);
+          setConnected(true);
+        } else {
+          console.error('Health check failed with status:', response.status);
+          setConnected(false);
+        }
       } catch (error) {
+        console.error('Health check error:', error);
         setConnected(false);
       }
     };
+    
+    // Check immediately
     checkConnection();
+    
+    // Check every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
   }, [fastApiUrl]);
+
+  // Manual connection test function
+  const testConnection = async () => {
+    try {
+      console.log('Manual health check at:', `${fastApiUrl}/api/health`);
+      const response = await fetch(`${fastApiUrl}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Manual health check response:', data);
+        setConnected(true);
+        alert('✅ Connection successful!');
+      } else {
+        console.error('Manual health check failed with status:', response.status);
+        setConnected(false);
+        alert(`❌ Connection failed: HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Manual health check error:', error);
+      setConnected(false);
+      alert(`❌ Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
   const handleSend = async () => {
     if (!apiKey.trim() || !userMessage.trim() || loading) return;
@@ -319,9 +385,10 @@ export default function Home() {
         </ChatArea>
 
         <InputSection>
-          <ConnectionStatus connected={connected}>
-            <StatusDot connected={connected} />
+          <ConnectionStatus $connected={connected}>
+            <StatusDot $connected={connected} />
             FastAPI Backend: {connected ? 'Connected' : 'Disconnected'} ({fastApiUrl})
+            <TestButton onClick={testConnection}>Test</TestButton>
           </ConnectionStatus>
           
           <ApiKeyInput
