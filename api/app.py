@@ -31,7 +31,7 @@ class ChatRequest(BaseModel):
     api_key: str          # OpenAI API key for authentication
 
 # Define the main chat endpoint that handles POST requests
-@app.post("/api/chat")
+@app.post("/chat")
 async def chat(request: ChatRequest):
     try:
         # Initialize OpenAI client with the provided API key
@@ -62,13 +62,14 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Define a health check endpoint to verify API status
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "message": "FastAPI backend is running"}
 
-# Vercel serverless function handler
-def handler(request, context):
-    return app(request, context)
+# Define a root endpoint for API info
+@app.get("/")
+async def root():
+    return {"message": "FastAPI backend for AI Engineer Challenge", "endpoints": ["/health", "/chat"]}
 
 # Entry point for running the application directly (for local development)
 if __name__ == "__main__":
