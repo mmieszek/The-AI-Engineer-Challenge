@@ -219,10 +219,14 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
-  // FastAPI backend URL - use relative path in production, localhost in development
+  // FastAPI backend URL - use deployed API in production, localhost in development
   const fastApiUrl = process.env.NODE_ENV === 'production' 
-    ? '' // Relative path for production Vercel deployment
+    ? 'https://api-hxgjmodoi-mmieszeks-projects.vercel.app' // Deployed API URL
     : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000');
+  
+  // Debug logging
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('FastAPI URL:', fastApiUrl);
 
   useEffect(() => {
     if (chatAreaRef.current) {
@@ -234,8 +238,8 @@ export default function Home() {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        console.log('Checking FastAPI health at:', `${fastApiUrl}/api/health`);
-        const response = await fetch(`${fastApiUrl}/api/health`, {
+        console.log('Checking FastAPI health at:', `${fastApiUrl}/health`);
+        const response = await fetch(`${fastApiUrl}/health`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -269,8 +273,8 @@ export default function Home() {
   // Manual connection test function
   const testConnection = async () => {
     try {
-      console.log('Manual health check at:', `${fastApiUrl}/api/health`);
-      const response = await fetch(`${fastApiUrl}/api/health`, {
+      console.log('Manual health check at:', `${fastApiUrl}/health`);
+      const response = await fetch(`${fastApiUrl}/health`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -303,7 +307,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${fastApiUrl}/api/chat`, {
+      const response = await fetch(`${fastApiUrl}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
