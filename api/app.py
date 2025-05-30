@@ -27,7 +27,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     developer_message: str  # Message from the developer/system
     user_message: str      # Message from the user
-    model: Optional[str] = "gpt-4.1-mini"  # Optional model selection with default
+    model: Optional[str] = "gpt-4.1-nano"  # Optional model selection with default
     api_key: str          # OpenAI API key for authentication
 
 # Define the main chat endpoint that handles POST requests
@@ -66,7 +66,11 @@ async def chat(request: ChatRequest):
 async def health_check():
     return {"status": "ok"}
 
-# Entry point for running the application directly
+# Vercel serverless function handler
+def handler(request, context):
+    return app(request, context)
+
+# Entry point for running the application directly (for local development)
 if __name__ == "__main__":
     import uvicorn
     # Start the server on all network interfaces (0.0.0.0) on port 8000

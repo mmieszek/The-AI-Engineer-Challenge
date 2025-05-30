@@ -219,8 +219,10 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
-  // FastAPI backend URL - only use the FastAPI server
-  const fastApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  // FastAPI backend URL - use relative path in production, localhost in development
+  const fastApiUrl = process.env.NODE_ENV === 'production' 
+    ? '' // Relative path for production Vercel deployment
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000');
 
   useEffect(() => {
     if (chatAreaRef.current) {
