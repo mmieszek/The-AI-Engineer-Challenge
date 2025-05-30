@@ -174,6 +174,22 @@ const LoadingDots = styled.div`
   }
 `;
 
+const ConnectionStatus = styled.div<{ connected: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: ${props => props.connected ? '#10b981' : '#ef4444'};
+`;
+
+const StatusDot = styled.div<{ connected: boolean }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${props => props.connected ? '#10b981' : '#ef4444'};
+`;
+
 interface Message {
   text: string;
   isUser: boolean;
@@ -185,13 +201,30 @@ export default function Home() {
   const [developerMessage, setDeveloperMessage] = useState('You are a helpful AI assistant.');
   const [userMessage, setUserMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(false);
   const chatAreaRef = useRef<HTMLDivElement>(null);
+
+  // FastAPI backend URL - only use the FastAPI server
+  const fastApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
   useEffect(() => {
     if (chatAreaRef.current) {
       chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Check FastAPI backend connection on component mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const response = await fetch(`${fastApiUrl}/api/health`);
+        setConnected(response.ok);
+      } catch (error) {
+        setConnected(false);
+      }
+    };
+    checkConnection();
+  }, [fastApiUrl]);
 
   const handleSend = async () => {
     if (!apiKey.trim() || !userMessage.trim() || loading) return;
@@ -202,7 +235,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
+      const response = await fetch(`${fastApiUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,6 +259,9 @@ export default function Home() {
       const decoder = new TextDecoder();
       let assistantResponse = '';
 
+      // Add empty assistant message to start streaming
+      setMessages(prev => [...prev, { text: '', isUser: false }]);
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -233,23 +269,20 @@ export default function Home() {
         const chunk = decoder.decode(value);
         assistantResponse += chunk;
         
+        // Update the last message (assistant response)
         setMessages(prev => {
           const newMessages = [...prev];
           const lastMessage = newMessages[newMessages.length - 1];
-          
-          if (lastMessage && !lastMessage.isUser && lastMessage.text.startsWith(assistantResponse.slice(0, -chunk.length))) {
+          if (lastMessage && !lastMessage.isUser) {
             lastMessage.text = assistantResponse;
-          } else {
-            newMessages.push({ text: assistantResponse, isUser: false });
           }
-          
           return newMessages;
         });
       }
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
-        text: 'Sorry, there was an error processing your request. Please check your API key and try again.', 
+        text: 'Sorry, there was an error processing your request. Please check your API key and ensure the FastAPI server is running on port 8000.', 
         isUser: false 
       }]);
     } finally {
@@ -269,7 +302,7 @@ export default function Home() {
       <ChatContainer>
         <Header>
           <Title>GPT-4.1-nano Chat</Title>
-          <Subtitle>AI Engineer Challenge - Modern Chat Interface</Subtitle>
+          <Subtitle>AI Engineer Challenge - FastAPI Backend Only</Subtitle>
         </Header>
         
         <ChatArea ref={chatAreaRef}>
@@ -286,6 +319,11 @@ export default function Home() {
         </ChatArea>
 
         <InputSection>
+          <ConnectionStatus connected={connected}>
+            <StatusDot connected={connected} />
+            FastAPI Backend: {connected ? 'Connected' : 'Disconnected'} ({fastApiUrl})
+          </ConnectionStatus>
+          
           <ApiKeyInput
             type="password"
             placeholder="Enter your OpenAI API Key"
@@ -309,7 +347,7 @@ export default function Home() {
 
           <SendButton 
             onClick={handleSend} 
-            disabled={!apiKey.trim() || !userMessage.trim() || loading}
+            disabled={!apiKey.trim() || !userMessage.trim() || loading || !connected}
           >
             {loading ? 'Sending...' : 'Send Message'}
           </SendButton>
